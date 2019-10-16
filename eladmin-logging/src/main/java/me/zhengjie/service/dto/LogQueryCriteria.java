@@ -11,8 +11,9 @@ import me.zhengjie.annotation.Query;
 @Data
 public class LogQueryCriteria {
 
-    @Query(type = Query.Type.INNER_LIKE)
-    private String username;
+    // 多字段模糊
+    @Query(blurry = "username,description,address,requestIp,method,params")
+    private String blurry;
 
     @Query
     private String logType;

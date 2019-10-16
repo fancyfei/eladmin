@@ -32,6 +32,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.QueryHelp;
+import java.util.List;
+import java.util.Map;
 
 /**
 * @author ${author}
@@ -48,13 +50,13 @@ public class ${className}ServiceImpl implements ${className}Service {
     private ${className}Mapper ${changeClassName}Mapper;
 
     @Override
-    public Object queryAll(${className}QueryCriteria criteria, Pageable pageable){
+    public Map<String,Object> queryAll(${className}QueryCriteria criteria, Pageable pageable){
         Page<${className}> page = ${changeClassName}Repository.findAll((root, criteriaQuery, criteriaBuilder) -> QueryHelp.getPredicate(root,criteria,criteriaBuilder),pageable);
         return PageUtil.toPage(page.map(${changeClassName}Mapper::toDto));
     }
 
     @Override
-    public Object queryAll(${className}QueryCriteria criteria){
+    public List<${className}DTO> queryAll(${className}QueryCriteria criteria){
         return ${changeClassName}Mapper.toDto(${changeClassName}Repository.findAll((root, criteriaQuery, criteriaBuilder) -> QueryHelp.getPredicate(root,criteria,criteriaBuilder)));
     }
 
@@ -92,7 +94,6 @@ public class ${className}ServiceImpl implements ${className}Service {
     public void update(${className} resources) {
         Optional<${className}> optional${className} = ${changeClassName}Repository.findById(resources.get${pkCapitalColName}());
         ValidationUtil.isNull( optional${className},"${className}","id",resources.get${pkCapitalColName}());
-
         ${className} ${changeClassName} = optional${className}.get();
 <#if columns??>
     <#list columns as column>
@@ -107,9 +108,8 @@ public class ${className}ServiceImpl implements ${className}Service {
         </#if>
     </#list>
 </#if>
-        // 此处需自己修改
-        resources.set${pkCapitalColName}(${changeClassName}.get${pkCapitalColName}());
-        ${changeClassName}Repository.save(resources);
+        ${changeClassName}.copy(resources);
+        ${changeClassName}Repository.save(${changeClassName});
     }
 
     @Override

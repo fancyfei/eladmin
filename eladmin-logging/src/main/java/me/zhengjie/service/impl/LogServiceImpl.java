@@ -10,6 +10,7 @@ import me.zhengjie.service.mapper.LogErrorMapper;
 import me.zhengjie.service.mapper.LogSmallMapper;
 import me.zhengjie.utils.PageUtil;
 import me.zhengjie.utils.QueryHelp;
+import me.zhengjie.utils.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +43,7 @@ public class LogServiceImpl implements LogService {
     @Override
     public Object queryAll(LogQueryCriteria criteria, Pageable pageable){
         Page<Log> page = logRepository.findAll(((root, criteriaQuery, cb) -> QueryHelp.getPredicate(root, criteria, cb)),pageable);
-        if (criteria.getLogType().equals("ERROR")) {
+        if ("ERROR".equals(criteria.getLogType())) {
             return PageUtil.toPage(page.map(logErrorMapper::toDto));
         }
         return page;
@@ -92,6 +93,7 @@ public class LogServiceImpl implements LogService {
                 e.printStackTrace();
             }
         }
+        log.setAddress(StringUtils.getCityInfo(log.getRequestIp()));
         log.setMethod(methodName);
         log.setUsername(username);
         log.setParams(params + " }");

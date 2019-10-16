@@ -6,6 +6,7 @@ import me.zhengjie.domain.Picture;
 import me.zhengjie.domain.VerificationCode;
 import me.zhengjie.modules.system.domain.User;
 import me.zhengjie.exception.BadRequestException;
+import me.zhengjie.modules.system.domain.vo.UserPassVo;
 import me.zhengjie.modules.system.service.DeptService;
 import me.zhengjie.modules.system.service.RoleService;
 import me.zhengjie.modules.system.service.dto.RoleSmallDTO;
@@ -25,6 +26,8 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -53,6 +56,13 @@ public class UserController {
 
     @Autowired
     private VerificationCodeService verificationCodeService;
+
+    @Log("导出用户数据")
+    @GetMapping(value = "/users/download")
+    @PreAuthorize("hasAnyRole('ADMIN','USER_ALL','USER_SELECT')")
+    public void update(HttpServletResponse response, UserQueryCriteria criteria) throws IOException {
+        userService.download(userService.queryAll(criteria), response);
+    }
 
     @Log("查询用户")
     @GetMapping(value = "/users")
@@ -122,33 +132,20 @@ public class UserController {
     }
 
     /**
-     * 验证密码
-     * @param user
-     * @return
-     */
-    @PostMapping(value = "/users/validPass")
-    public ResponseEntity validPass(@RequestBody User user){
-        UserDetails userDetails = SecurityUtils.getUserDetails();
-        Map map = new HashMap();
-        map.put("status",200);
-        if(!userDetails.getPassword().equals(EncryptUtils.encryptPassword(user.getPassword()))){
-           map.put("status",400);
-        }
-        return new ResponseEntity(map,HttpStatus.OK);
-    }
-
-    /**
      * 修改密码
      * @param user
      * @return
      */
     @PostMapping(value = "/users/updatePass")
-    public ResponseEntity updatePass(@RequestBody User user){
+    public ResponseEntity updatePass(@RequestBody UserPassVo user){
         UserDetails userDetails = SecurityUtils.getUserDetails();
-        if(userDetails.getPassword().equals(EncryptUtils.encryptPassword(user.getPassword()))){
+        if(!userDetails.getPassword().equals(EncryptUtils.encryptPassword(user.getOldPass()))){
+            throw new BadRequestException("修改失败，旧密码错误");
+        }
+        if(userDetails.getPassword().equals(EncryptUtils.encryptPassword(user.getNewPass()))){
             throw new BadRequestException("新密码不能与旧密码相同");
         }
-        userService.updatePass(userDetails.getUsername(),EncryptUtils.encryptPassword(user.getPassword()));
+        userService.updatePass(userDetails.getUsername(),EncryptUtils.encryptPassword(user.getNewPass()));
         return new ResponseEntity(HttpStatus.OK);
     }
 
@@ -159,8 +156,7 @@ public class UserController {
      */
     @PostMapping(value = "/users/updateAvatar")
     public ResponseEntity updateAvatar(@RequestParam MultipartFile file){
-        Picture picture = pictureService.upload(file, SecurityUtils.getUsername());
-        userService.updateAvatar(SecurityUtils.getUsername(),picture.getUrl());
+        userService.updateAvatar(file);
         return new ResponseEntity(HttpStatus.OK);
     }
 
@@ -182,6 +178,8 @@ public class UserController {
         userService.updateEmail(userDetails.getUsername(),user.getEmail());
         return new ResponseEntity(HttpStatus.OK);
     }
+
+
 
     /**
      * 如果当前用户的角色级别低于创建用户的角色级别，则抛出权限不足的错误
